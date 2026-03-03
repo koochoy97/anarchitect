@@ -67,14 +67,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => clearInterval(checkGIS)
   }, [handleToken])
 
-  // Auto-login: silent renewal if user logged in before, else show popup
+  // Auto-login: verify stored token, silently renew if expired, or show popup for first time
   useEffect(() => {
     if (!gisReady) return
-    if (token) {
-      // Token exists in storage — try silent renewal to refresh it
-      requestAccessToken('')
+
+    const storedToken = loadStored<string>(TOKEN_KEY)
+    if (storedToken) {
+      // Verify the stored token is still valid
+      fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+        headers: { Authorization: `Bearer ${storedToken}` },
+      }).then(res => {
+        if (res.ok) {
+          // Token still valid — no need to request a new one
+          setLoading(false)
+        } else {
+          // Token expired — try silent renewal
+          requestAccessToken('')
+        }
+      }).catch(() => {
+        requestAccessToken('')
+      })
     } else if (loadStored<UserInfo>(USER_KEY)) {
-      // Had a previous session — try silent renewal
+      // Had a previous session but no token — try silent renewal
       requestAccessToken('')
     } else {
       // First time — show consent popup
