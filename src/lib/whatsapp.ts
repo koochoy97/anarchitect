@@ -34,7 +34,7 @@ export const TEMPLATE_FIELDS: TemplateField[] = [
   { key: 'banco', label: 'Banco', section: 'proveedor', defaultFromHeader: 'Banco' },
   { key: 'numero_cuenta', label: 'Numero de Cuenta', section: 'proveedor', defaultFromHeader: 'numero de cuenta' },
   { key: 'cci', label: 'CCI', section: 'proveedor', defaultFromHeader: 'CCI' },
-  { key: 'titular_cuenta', label: 'Titular de la Cuenta', section: 'proveedor', defaultFromHeader: 'titular de la cuenta' },
+  { key: 'titular_cuenta', label: 'Titular de la Cuenta', section: 'proveedor', defaultFromHeader: 'titular de cuenta' },
 ]
 
 export function renderTemplate(template: string, data: Record<string, string>): string {
