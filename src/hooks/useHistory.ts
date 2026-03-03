@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getRows, appendRow, AuthExpiredError } from '../lib/sheets-api'
+import { getRows, appendRow, updateRow, AuthExpiredError } from '../lib/sheets-api'
 import { useAuth } from '../context/AuthContext'
 
 const TAB = 'Historial'
 
 export interface HistoryEntry {
+  _rowIndex: number
   fecha: string
   proveedor: string
   mensaje: string
@@ -26,7 +27,8 @@ export function useHistory() {
         setEntries([])
         return
       }
-      const data = rows.slice(1).map(row => ({
+      const data = rows.slice(1).map((row, i) => ({
+        _rowIndex: i + 2, // 1-based, skip header
         fecha: row[0] ?? '',
         proveedor: row[1] ?? '',
         mensaje: row[2] ?? '',
@@ -45,10 +47,16 @@ export function useHistory() {
 
   useEffect(() => { fetchAll() }, [fetchAll])
 
-  const addEntry = useCallback(async (entry: HistoryEntry) => {
+  const addEntry = useCallback(async (entry: Omit<HistoryEntry, '_rowIndex'>) => {
     if (!token) return
     await appendRow(token, `${TAB}!A:C`, [entry.fecha, entry.proveedor, entry.mensaje])
   }, [token])
 
-  return { entries, loading, error, refresh: fetchAll, addEntry }
+  const updateEntry = useCallback(async (rowIndex: number, mensaje: string) => {
+    if (!token) return
+    await updateRow(token, `${TAB}!C${rowIndex}`, [mensaje])
+    await fetchAll()
+  }, [token, fetchAll])
+
+  return { entries, loading, error, refresh: fetchAll, addEntry, updateEntry }
 }

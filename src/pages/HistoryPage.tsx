@@ -4,9 +4,12 @@ import { useHistory, type HistoryEntry } from '../hooks/useHistory'
 import { copyToClipboard } from '../lib/whatsapp'
 import Toast from '../components/Toast'
 
-function MessageModal({ entry, onClose }: { entry: HistoryEntry; onClose: () => void }) {
+function MessageModal({ entry, onClose, onSave }: { entry: HistoryEntry; onClose: () => void; onSave: (rowIndex: number, mensaje: string) => Promise<void> }) {
   const [text, setText] = useState(entry.mensaje)
+  const [toastMsg, setToastMsg] = useState('')
   const [showToast, setShowToast] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const hasChanges = text !== entry.mensaje
 
   useEffect(() => {
     const handle = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
@@ -21,7 +24,21 @@ function MessageModal({ entry, onClose }: { entry: HistoryEntry; onClose: () => 
 
   const handleCopy = async () => {
     const ok = await copyToClipboard(text)
-    if (ok) setShowToast(true)
+    if (ok) {
+      setToastMsg('Mensaje copiado')
+      setShowToast(true)
+    }
+  }
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      await onSave(entry._rowIndex, text)
+      setToastMsg('Cambios guardados')
+      setShowToast(true)
+    } finally {
+      setSaving(false)
+    }
   }
 
   const handleToastDone = useCallback(() => {
@@ -31,18 +48,15 @@ function MessageModal({ entry, onClose }: { entry: HistoryEntry; onClose: () => 
   return (<>
     {createPortal(
       <>
-        {/* Backdrop */}
         <div
           style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(0,0,0,0.4)', backdropFilter: 'blur(4px)' }}
           onClick={onClose}
         />
-        {/* Modal */}
         <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 32, paddingBottom: 32, pointerEvents: 'none' }}>
           <div
             className="bg-surface-raised rounded-2xl shadow-lg border border-border animate-slide-up"
             style={{ width: '100%', maxWidth: 768, margin: '0 16px', pointerEvents: 'auto', display: 'flex', flexDirection: 'column', maxHeight: 'calc(100vh - 4rem)', overflow: 'hidden' }}
           >
-            {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">
               <div>
                 <h2 className="text-lg font-bold text-ink">{entry.proveedor}</h2>
@@ -58,7 +72,6 @@ function MessageModal({ entry, onClose }: { entry: HistoryEntry; onClose: () => 
               </button>
             </div>
 
-            {/* Body */}
             <div className="flex-1 min-h-0 p-6 overflow-y-auto">
               <textarea
                 value={text}
@@ -69,16 +82,35 @@ function MessageModal({ entry, onClose }: { entry: HistoryEntry; onClose: () => 
               />
             </div>
 
-            {/* Footer */}
             <div className="px-6 py-4 border-t border-border shrink-0 flex items-center gap-3">
+              {hasChanges && (
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold cursor-pointer bg-accent text-ink-invert hover:bg-accent-hover shadow-sm hover:shadow-md transition-all disabled:opacity-50"
+                >
+                  {saving ? (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+                    </svg>
+                  )}
+                  Guardar cambios
+                </button>
+              )}
               <button
                 onClick={handleCopy}
-                className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold cursor-pointer bg-accent text-ink-invert hover:bg-accent-hover shadow-sm hover:shadow-md transition-all"
+                className={`flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-sm font-semibold cursor-pointer transition-all ${
+                  hasChanges
+                    ? 'bg-surface-overlay text-ink-muted hover:bg-border'
+                    : 'flex-1 bg-accent text-ink-invert hover:bg-accent-hover shadow-sm hover:shadow-md'
+                }`}
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
                 </svg>
-                Copiar mensaje
+                Copiar
               </button>
               <button
                 onClick={onClose}
@@ -92,12 +124,12 @@ function MessageModal({ entry, onClose }: { entry: HistoryEntry; onClose: () => 
       </>,
       document.body
     )}
-    <Toast message="Mensaje copiado" visible={showToast} onDone={handleToastDone} />
+    <Toast message={toastMsg} visible={showToast} onDone={handleToastDone} />
   </>)
 }
 
 export default function HistoryPage() {
-  const { entries, loading, error } = useHistory()
+  const { entries, loading, error, updateEntry } = useHistory()
   const [selected, setSelected] = useState<HistoryEntry | null>(null)
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
 
@@ -107,6 +139,11 @@ export default function HistoryPage() {
       setCopiedIdx(idx)
       setTimeout(() => setCopiedIdx(null), 1500)
     }
+  }
+
+  const handleSave = async (rowIndex: number, mensaje: string) => {
+    await updateEntry(rowIndex, mensaje)
+    setSelected(null)
   }
 
   if (loading) {
@@ -161,7 +198,7 @@ export default function HistoryPage() {
             <tbody>
               {entries.map((e, i) => (
                 <tr
-                  key={i}
+                  key={e._rowIndex}
                   className="border-b border-border last:border-b-0 hover:bg-surface-overlay/40 transition-colors cursor-pointer"
                   onClick={() => setSelected(e)}
                 >
@@ -203,7 +240,7 @@ export default function HistoryPage() {
         </div>
       )}
 
-      {selected && <MessageModal entry={selected} onClose={() => setSelected(null)} />}
+      {selected && <MessageModal entry={selected} onClose={() => setSelected(null)} onSave={handleSave} />}
     </div>
   )
 }
