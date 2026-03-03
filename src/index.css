@@ -56,6 +56,37 @@
   --duration-normal: 250ms;
 }
 
+/* Dark mode overrides — warm rose-tinted darks */
+html.dark {
+  --color-surface: #111010;
+  --color-surface-raised: #1A1818;
+  --color-surface-overlay: #252222;
+  --color-surface-invert: #F5F0F1;
+
+  --color-ink: #F5F0F1;
+  --color-ink-muted: #B8A0A8;
+  --color-ink-faint: #7A6B70;
+  --color-ink-invert: #111010;
+
+  --color-accent: #F06292;
+  --color-accent-hover: #F48BAD;
+  --color-accent-soft: #2D1520;
+  --color-accent-muted: #3D1E2E;
+
+  --color-danger: #EF5350;
+  --color-danger-soft: #2D1518;
+
+  --color-border: #2E2829;
+  --color-border-strong: #3D3537;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.4), 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-focus: 0 0 0 3px rgba(240, 98, 146, 0.3);
+
+  color-scheme: dark;
+}
+
 /* Base resets */
 body {
   font-family: var(--font-sans);
