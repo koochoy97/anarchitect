@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { getRows, appendRow, updateRow, AuthExpiredError } from '../lib/sheets-api'
+import { getRows, appendRow, updateRow, deleteRow, getSheetMetadata, AuthExpiredError } from '../lib/sheets-api'
 import { useAuth } from '../context/AuthContext'
 
 const TAB = 'Historial'
@@ -58,5 +58,14 @@ export function useHistory() {
     await fetchAll()
   }, [token, fetchAll])
 
-  return { entries, loading, error, refresh: fetchAll, addEntry, updateEntry }
+  const deleteEntry = useCallback(async (rowIndex: number) => {
+    if (!token) return
+    const meta = await getSheetMetadata(token)
+    const sheet = meta.find(s => s.title === TAB)
+    if (!sheet) throw new Error(`Tab "${TAB}" not found`)
+    await deleteRow(token, sheet.sheetId, rowIndex - 1)
+    await fetchAll()
+  }, [token, fetchAll])
+
+  return { entries, loading, error, refresh: fetchAll, addEntry, updateEntry, deleteEntry }
 }

@@ -4,11 +4,13 @@ import { useHistory, type HistoryEntry } from '../hooks/useHistory'
 import { copyToClipboard } from '../lib/whatsapp'
 import Toast from '../components/Toast'
 
-function MessageModal({ entry, onClose, onSave }: { entry: HistoryEntry; onClose: () => void; onSave: (rowIndex: number, mensaje: string) => Promise<void> }) {
+function MessageModal({ entry, onClose, onSave, onDelete }: { entry: HistoryEntry; onClose: () => void; onSave: (rowIndex: number, mensaje: string) => Promise<void>; onDelete: (rowIndex: number) => Promise<void> }) {
   const [text, setText] = useState(entry.mensaje)
   const [toastMsg, setToastMsg] = useState('')
   const [showToast, setShowToast] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDelete, setConfirmDelete] = useState(false)
   const hasChanges = text !== entry.mensaje
 
   useEffect(() => {
@@ -38,6 +40,16 @@ function MessageModal({ entry, onClose, onSave }: { entry: HistoryEntry; onClose
       setShowToast(true)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    setDeleting(true)
+    try {
+      await onDelete(entry._rowIndex)
+      onClose()
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -112,6 +124,35 @@ function MessageModal({ entry, onClose, onSave }: { entry: HistoryEntry; onClose
                 </svg>
                 Copiar
               </button>
+              <div className="flex-1" />
+              {confirmDelete ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-danger font-medium">¿Eliminar?</span>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    className="px-4 py-2 rounded-lg text-xs font-semibold cursor-pointer bg-danger text-white hover:bg-danger/80 transition-all disabled:opacity-50"
+                  >
+                    {deleting ? 'Eliminando...' : 'Sí, eliminar'}
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="px-4 py-2 rounded-lg text-xs font-medium text-ink-muted bg-surface-overlay hover:bg-border transition-all cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="p-2.5 rounded-xl text-ink-faint hover:text-danger hover:bg-danger-soft transition-all cursor-pointer"
+                  title="Eliminar entrada"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                  </svg>
+                </button>
+              )}
               <button
                 onClick={onClose}
                 className="px-5 py-3 rounded-xl text-sm font-medium text-ink-muted bg-surface-overlay hover:bg-border transition-all cursor-pointer"
@@ -129,7 +170,7 @@ function MessageModal({ entry, onClose, onSave }: { entry: HistoryEntry; onClose
 }
 
 export default function HistoryPage() {
-  const { entries, loading, error, updateEntry } = useHistory()
+  const { entries, loading, error, updateEntry, deleteEntry } = useHistory()
   const [selected, setSelected] = useState<HistoryEntry | null>(null)
   const [copiedIdx, setCopiedIdx] = useState<number | null>(null)
 
@@ -240,7 +281,7 @@ export default function HistoryPage() {
         </div>
       )}
 
-      {selected && <MessageModal entry={selected} onClose={() => setSelected(null)} onSave={handleSave} />}
+      {selected && <MessageModal entry={selected} onClose={() => setSelected(null)} onSave={handleSave} onDelete={async (rowIndex) => { await deleteEntry(rowIndex); setSelected(null) }} />}
     </div>
   )
 }
